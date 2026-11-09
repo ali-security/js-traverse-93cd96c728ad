@@ -1,0 +1,46 @@
+name: seal-build
+on:
+  workflow_dispatch:
+    inputs:
+      test-filter:
+        description: "Optional tape test file glob (e.g. test/set.js); empty runs the full suite"
+        required: false
+        default: ""
+jobs:
+  pack:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '0.10'
+      - name: Pack (npm 2 keeps .npmignore like the publisher's npm 1.3.7)
+        run: |
+          node --version
+          npm --version
+          rm -rf .github
+          npm pack
+          ls -l traverse-0.6.6.tgz
+      - uses: actions/upload-artifact@v4
+        with:
+          name: traverse-0.6.6
+          path: traverse-0.6.6.tgz
+  test-node22:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install devDependencies (tape ~1.0.4)
+        run: npm install --no-save --no-package-lock
+      - name: Test on Node 22
+        run: |
+          node --version
+          if [ -n "${{ inputs.test-filter }}" ]; then
+            npx tape ${{ inputs.test-filter }}
+          else
+            npm test
+          fi
